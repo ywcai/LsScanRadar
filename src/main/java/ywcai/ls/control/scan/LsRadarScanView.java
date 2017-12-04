@@ -24,7 +24,7 @@ public class LsRadarScanView extends View {
     // 圆周360°
     private static final float ANGLE_360 = 360.0F;
     // 雷达扫描一圈的时间 默认1秒转一圈
-    private static int mRadarScanTime = 1000;
+    private int mRadarScanTime = 1000;
     // 雷达背景线的条数 默认3条
     private int mDefaultRadarBackgroundLinesNumber = 3;
     // 雷达背景线的宽度 默认2
@@ -42,18 +42,28 @@ public class LsRadarScanView extends View {
 
     private Paint mRadarBackgroundLinesPaint;
 
-    private static Point mCenterPoint;
+    private Point mCenterPoint;
     static private Matrix mMatrix;
     private Paint mRadarScanPaint;
     private Paint mRadarBackgroundPaint;
     private int mViewRadius;
     private float mScanRadius;
-    static Handler handler = new Handler();
-    static Runnable run = new Runnable() {
+    private boolean isStop = true;
+    Handler handler = new Handler();
+    Runnable run = new Runnable() {
         @Override
         public void run() {
-            mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
-            handler.postDelayed(run, REFRESH_RATE);
+            while (true) {
+                if (!isStop) {
+                    mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
+                    postInvalidate();
+                }
+                try {
+                    Thread.sleep(mRadarScanTime);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     };
 
@@ -355,11 +365,13 @@ public class LsRadarScanView extends View {
 
 
     public void startScan() {
+        isStop = false;
         handler.post(run);
     }
 
 
     public void stopScan() {
+        isStop = true;
         handler.removeCallbacks(run);
     }
 }
