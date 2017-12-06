@@ -9,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.SweepGradient;
 import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
@@ -48,9 +49,7 @@ public class LsRadarScanView extends View {
     private Paint mRadarBackgroundPaint;
     private int mViewRadius;
     private float mScanRadius;
-    private boolean isStop = true;
-    Handler handler = new Handler();
-    Runnable run;
+    Thread thread;
 
 
     public LsRadarScanView(Context context) {
@@ -350,27 +349,45 @@ public class LsRadarScanView extends View {
 
 
     public void startScan() {
-        isStop = false;
-        run = new Runnable() {
+        thread = new Thread(new Runnable() {
+            MyHandler handler = new MyHandler();
+
             @Override
             public void run() {
-                while (!isStop) {
-                    mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
-                    postInvalidate();
-                }
-                try {
-                    Thread.sleep(mRadarScanTime);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                //doting
+                while (true) {
+                    Message msg = new Message();
+                    msg.what = 0;
+                    handler.handleMessage(msg);
+                    try {
+                        Thread.sleep(mRadarScanTime);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        };
-        handler.post(run);
+        });
+        thread.start();
     }
 
+    class MyHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            if (msg.what == 0) {
+                rotate();
+            }
+        }
+    }
+
+    private void rotate() {
+        mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
+    }
 
     public void stopScan() {
-        isStop = true;
-        handler.removeCallbacks(run);
+        if (thread != null) {
+            thread.interrupt();
+        }
+        thread = null;
     }
 }
