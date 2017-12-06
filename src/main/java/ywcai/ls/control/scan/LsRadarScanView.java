@@ -50,20 +50,7 @@ public class LsRadarScanView extends View {
     private float mScanRadius;
     private boolean isStop = true;
     Handler handler = new Handler();
-    Runnable run = new Runnable() {
-        @Override
-        public void run() {
-            while (!isStop) {
-                mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
-                postInvalidate();
-            }
-            try {
-                Thread.sleep(mRadarScanTime);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    };
+    Runnable run;
 
 
     public LsRadarScanView(Context context) {
@@ -364,6 +351,20 @@ public class LsRadarScanView extends View {
 
     public void startScan() {
         isStop = false;
+        run = new Runnable() {
+            @Override
+            public void run() {
+                while (!isStop) {
+                    mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
+                    postInvalidate();
+                }
+                try {
+                    Thread.sleep(mRadarScanTime);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
         handler.post(run);
     }
 
