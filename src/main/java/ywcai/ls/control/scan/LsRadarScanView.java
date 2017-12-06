@@ -360,7 +360,7 @@ public class LsRadarScanView extends View {
                     msg.what = 0;
                     handler.handleMessage(msg);
                     try {
-                        Thread.sleep(mRadarScanTime);
+                        Thread.sleep(REFRESH_RATE);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -382,6 +382,7 @@ public class LsRadarScanView extends View {
 
     private void rotate() {
         mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
+        invalidate();
     }
 
     public void stopScan() {
