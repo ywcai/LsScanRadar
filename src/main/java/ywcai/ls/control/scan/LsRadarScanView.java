@@ -9,11 +9,14 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.SweepGradient;
 import android.os.Handler;
-import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 
 public class LsRadarScanView extends View {
@@ -49,8 +52,14 @@ public class LsRadarScanView extends View {
     private Paint mRadarBackgroundPaint;
     private int mViewRadius;
     private float mScanRadius;
-    Thread thread;
-
+    Runnable runnable=new Runnable() {
+        @Override
+        public void run() {
+            mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
+            postInvalidate();
+        }
+    };
+    ScheduledExecutorService executorService=Executors.newScheduledThreadPool(1);
 
     public LsRadarScanView(Context context) {
         super(context);
@@ -349,46 +358,13 @@ public class LsRadarScanView extends View {
 
 
     public void startScan() {
-        thread = new Thread(new Runnable() {
-            MyHandler handler = new MyHandler();
-
-            @Override
-            public void run() {
-                //doting
-                while (true) {
-                    Message msg = new Message();
-                    msg.what = 0;
-                    handler.handleMessage(msg);
-                    try {
-                        Thread.sleep(REFRESH_RATE);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-        thread.start();
+        executorService.scheduleAtFixedRate(runnable,0,REFRESH_RATE, TimeUnit.MILLISECONDS);
     }
 
-    class MyHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            if (msg.what == 0) {
-                rotate();
-            }
-        }
-    }
 
-    private void rotate() {
-        mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
-        LsRadarScanView.this.postInvalidate();
-    }
+
 
     public void stopScan() {
-        if (thread != null) {
-            thread.interrupt();
-        }
-        thread = null;
+        executorService.shutdownNow();
     }
 }
