@@ -382,7 +382,7 @@ public class LsRadarScanView extends View {
 
     private void rotate() {
         mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
-        LsRadarScanView.this.invalidate();
+        LsRadarScanView.this.postInvalidate();
     }
 
     public void stopScan() {
