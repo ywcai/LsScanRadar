@@ -43,7 +43,7 @@ public class LsRadarScanView extends View {
     private Paint mRadarBackgroundLinesPaint;
 
     private Point mCenterPoint;
-    static private Matrix mMatrix;
+    private Matrix mMatrix;
     private Paint mRadarScanPaint;
     private Paint mRadarBackgroundPaint;
     private int mViewRadius;
@@ -53,16 +53,14 @@ public class LsRadarScanView extends View {
     Runnable run = new Runnable() {
         @Override
         public void run() {
-            while (true) {
-                if (!isStop) {
-                    mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
-                    postInvalidate();
-                }
-                try {
-                    Thread.sleep(mRadarScanTime);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            while (!isStop) {
+                mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
+                postInvalidate();
+            }
+            try {
+                Thread.sleep(mRadarScanTime);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     };
