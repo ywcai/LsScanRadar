@@ -4,7 +4,6 @@
 
     <application
         android:allowBackup="false"
-        android:Debugable="false"
         android:label="@string/app_name"
         android:supportsRtl="true">
 
