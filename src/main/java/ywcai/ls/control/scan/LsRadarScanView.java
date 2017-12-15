@@ -1,5 +1,6 @@
 package ywcai.ls.control.scan;
 
+
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -8,11 +9,16 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.SweepGradient;
+
 import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+
+
 import android.util.AttributeSet;
 import android.view.View;
+
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,17 +38,19 @@ public class LsRadarScanView extends View {
     // 雷达背景线的条数 默认3条
     private int mDefaultRadarBackgroundLinesNumber = 3;
     // 雷达背景线的宽度 默认2
-    private static final float DEFAULT_RADAR_BACKGROUND_LINES_WIDTH = 2.0F;
+    private float DEFAULT_RADAR_BACKGROUND_LINES_WIDTH = 2.0F;
 
-    private static final int DEFAULT_RADAR_BACKGROUND_LINES_COLOR = Color.GRAY;
+    private int DEFAULT_RADAR_BACKGROUND_LINES_COLOR = Color.GRAY;
 
-    private static final int DEFAULT_RADAR_BACKGROUND_COLOR = Color.argb(0x00, 0x00, 0x00, 0x00);
+    private int DEFAULT_RADAR_BACKGROUND_COLOR = Color.argb(0x00, 0x00, 0x00, 0x00);
 
-    private static final int DEFAULT_RADAR_SCAN_ALPHA = 0x99;
+    private int DEFAULT_RADAR_SCAN_ALPHA = 0x33;
     // 雷达扫描的起始颜色
     private int mShaderStartColor = Color.parseColor("#00000000");
     // 雷达扫描的结束颜色
     private int mShaderEndColor = Color.parseColor("#FF888888");
+
+    private int mTextColor = Color.YELLOW;
 
     private Paint mRadarBackgroundLinesPaint;
 
@@ -50,16 +58,13 @@ public class LsRadarScanView extends View {
     private Matrix mMatrix;
     private Paint mRadarScanPaint;
     private Paint mRadarBackgroundPaint;
+
     private int mViewRadius;
     private float mScanRadius;
-    Runnable runnable=new Runnable() {
-        @Override
-        public void run() {
-            mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
-            postInvalidate();
-        }
-    };
-    ScheduledExecutorService executorService=Executors.newScheduledThreadPool(1);
+    public boolean isRun = false;
+    ScheduledExecutorService executorService;
+    MyHandler myHandler = new MyHandler();
+    Canvas canvas;
 
     public LsRadarScanView(Context context) {
         super(context);
@@ -81,7 +86,7 @@ public class LsRadarScanView extends View {
     /**
      * 初始化
      */
-    private void initView() {
+    public void initView() {
         // 中心点
         mCenterPoint = new Point();
         // 扫描旋转
@@ -101,6 +106,13 @@ public class LsRadarScanView extends View {
         mRadarScanPaint = new Paint();
         mRadarScanPaint.setAntiAlias(true);
         mRadarScanPaint.setAlpha(DEFAULT_RADAR_SCAN_ALPHA);
+
+//        //文本画笔
+//        mRadarTextPaint = new TextPaint();
+//        mRadarTextPaint.setAntiAlias(true);
+//        mRadarTextPaint.setColor(mTextColor);
+//        mRadarTextPaint = new Paint();
+//        mRadarTextPaint.setTextSize(16);
     }
 
     /**
@@ -153,7 +165,10 @@ public class LsRadarScanView extends View {
                 R.styleable.LsRadarScanView_radarScanAlpha,
                 DEFAULT_RADAR_SCAN_ALPHA
         ));
-
+//        // 设置文本颜色
+//        mTextColor = typedArray.getInteger(
+//                R.styleable.LsRadarScanView_radarTextColor,
+//                mTextColor);
         typedArray.recycle();
     }
 
@@ -176,19 +191,17 @@ public class LsRadarScanView extends View {
             mScanRadius = (mViewRadius - mRadarBackgroundLinesPaint.getStrokeWidth() / 2);
             // 中心点
             mCenterPoint.set(measuredWidth / 2, measuredHeight / 2);
-
-            startScan();
         }
     }
 
     @Override
     protected void onVisibilityChanged(@NonNull View changedView, int visibility) {
         super.onVisibilityChanged(changedView, visibility);
-        if (VISIBLE == visibility) {
-//            startScan();
-        } else {
-            stopScan();
-        }
+//        if (VISIBLE == visibility) {
+////            startScan();
+//        } else {
+//            stopScan();
+//        }
     }
 
     @Override
@@ -219,8 +232,13 @@ public class LsRadarScanView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        this.canvas = canvas;
+        initCanvas();
 
-        // 画背景
+    }
+
+    // 初始化背景
+    private void initCanvas() {
         canvas.drawCircle(mCenterPoint.x, mCenterPoint.y, mViewRadius, mRadarBackgroundPaint);
         // 划线
         for (int i = 1; i <= mDefaultRadarBackgroundLinesNumber; i++) {
@@ -248,6 +266,7 @@ public class LsRadarScanView extends View {
         canvas.concat(mMatrix);
         canvas.drawCircle(mCenterPoint.x, mCenterPoint.y, scanRadius, mRadarScanPaint);
     }
+
 
     /**
      * 设置雷达背景圆圈数
@@ -356,15 +375,54 @@ public class LsRadarScanView extends View {
         return this;
     }
 
+    class MyHandler extends Handler {
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            if (msg.what == 0) {
+                mMatrix.postRotate(ANGLE_360 / mRadarScanTime * REFRESH_RATE, mCenterPoint.x, mCenterPoint.y);
+                postInvalidate();
+            }
+        }
+    }
+
 
     public void startScan() {
-        executorService.scheduleAtFixedRate(runnable,0,REFRESH_RATE, TimeUnit.MILLISECONDS);
+        isRun = true;
+        if (executorService != null) {
+            executorService.shutdownNow();
+        }
+        executorService = Executors.newSingleThreadScheduledExecutor();
+        executorService.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                myHandler.sendEmptyMessage(0);
+            }
+        }, 0, REFRESH_RATE, TimeUnit.MILLISECONDS);
     }
-
-
-
 
     public void stopScan() {
-        executorService.shutdownNow();
+
+        if (executorService != null) {
+            executorService.shutdownNow();
+        }
+//        myHandler.sendEmptyMessage(1);
+        isRun = false;
     }
+
+
+    public Point getCenter() {
+        return mCenterPoint;
+    }
+
+    public int getRadius() {
+        return mViewRadius;
+    }
+
+    private void resetView() {
+        initCanvas();
+    }
+
+
 }

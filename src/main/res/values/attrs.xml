@@ -15,5 +15,7 @@
         <attr name="radarScanColor" format="color|reference" />
         <!-- 设置雷达扫描透明度 -->
         <attr name="radarScanAlpha" format="integer|reference" />
+        <!-- 设置雷达文本颜色度 -->
+        <attr name="radarTextColor" format="color" />
     </declare-styleable>
 </resources>
